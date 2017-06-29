@@ -167,3 +167,8 @@ class ImageSaveError(UnsupportedError):
     @staticmethod
     def get_code():
         return 202
+
+class AspectRatioError(UnsupportedError):
+    @staticmethod
+    def get_code():
+        return 203

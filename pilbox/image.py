@@ -107,6 +107,13 @@ class Image(object):
             raise errors.DimensionsError("Invalid height: %s" % height)
 
     @staticmethod
+    def validate_scale_ar_options(ar):
+        if not ar:
+            raise errors.AspectRatioError("Missing Aspect Ratio")
+        elif not ":" in ar:
+            raise errors.AspectRatioError("Wrong Aspect Ratio. Aspect Ratio must be in format W:H. For Ex. 16:9 ")
+
+    @staticmethod
     def validate_degree(deg):
         if deg is None or deg == "":
             raise errors.DegreeError("Missing degree")
@@ -201,6 +208,8 @@ class Image(object):
             self._fill(size, opts)
         elif opts["mode"] == "scale":
             self._scale(size, opts)
+        elif opts["mode"] == "scale-ar":
+            self._scale(size, opts)
         else:
             self._crop(size, opts)
         return self
@@ -236,6 +245,31 @@ class Image(object):
             self.img = self.img.rotate(deg, expand=bool(int(opts["expand"])))
 
         return self
+
+    def scaleToAspectRatio(self,ar,**kwargs):
+        opts = Image._normalize_options(kwargs)
+        tokens=ar.split(":")
+        ratio=float(tokens[0])/float(tokens[1])
+        width=self.img.size[0]
+        height=self.img.size[1]
+        print("Orig : "+str(width)+":"+str(height))
+        if width==height:
+            width=width*ratio
+        elif height>width:
+            width=height*ratio
+        else:
+            height=height/ratio
+        print("New : "+str(width)+":"+str(height))
+        paddingH=int(width*0.05)
+        paddingV=int(height*0.05)
+        width=int(width)
+        height=int(height)
+        self._adapt([width,height],opts)
+        a4im = PIL.Image.new('RGB',
+                 (width+paddingH, height+paddingV),   # A4 at 72dpi
+                 (255, 255, 255))  # White
+        a4im.paste(self.img, (int(paddingH/2),int(paddingV/2)))  # Not centered, top-left corner
+        self.img=a4im
 
     def save(self, **kwargs):
         """Returns a buffer to the image for saving, supports the

@@ -140,12 +140,16 @@ class PilboxApplication(tornado.web.Application):
         tornado.web.Application.__init__(self, self.get_handlers(), **settings)
 
     def get_handlers(self):
-        return [(r"/", ImageHandler)]
+        return [(r"/processImage", ImageHandler),(r"/health", HealthHandler)]
 
+
+class HealthHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write('{"status":"ok"}')
 
 class ImageHandler(tornado.web.RequestHandler):
     FORWARD_HEADERS = ["Cache-Control", "Expires", "Last-Modified"]
-    OPERATIONS = ["region", "resize", "rotate", "noop"]
+    OPERATIONS = ["region", "resize", "rotate", "noop", "scale-ar"]
 
     _FORMAT_TO_MIME = {
         "gif": "image/gif",
@@ -174,6 +178,7 @@ class ImageHandler(tornado.web.RequestHandler):
 
         opts = self._get_save_options()
         ops = self._get_operations()
+        print("Ops : "+str(ops))
         if "resize" in ops:
             w, h = self.get_argument("w"), self.get_argument("h")
             Image.validate_dimensions(w, h)
@@ -187,6 +192,9 @@ class ImageHandler(tornado.web.RequestHandler):
             opts.update(self._get_rotate_options())
         if "region" in ops:
             Image.validate_rectangle(self.get_argument("rect"))
+        if "scale-ar" in ops:
+            print("Checking scale-ar options")
+            Image.validate_scale_ar_options(self.get_argument("ar"))
 
         Image.validate_options(opts)
 
@@ -246,8 +254,15 @@ class ImageHandler(tornado.web.RequestHandler):
                 self._image_rotate(image)
             elif operation == "region":
                 self._image_region(image)
+            elif operation == "scale-ar":
+                self._image_scale_ar(image)
+                print("Done")
 
         return (self._image_save(image), image.img.format)
+
+    def _image_scale_ar(self, image):
+        opts = self._get_resize_options()
+        image.scaleToAspectRatio(self.get_argument("ar"),**opts)
 
     def _image_region(self, image):
         image.region(self.get_argument("rect").split(","))
@@ -350,7 +365,7 @@ def start_server(app=None):  # pragma: no cover
         logger.setLevel(logging.DEBUG)
     server = tornado.httpserver.HTTPServer(
         app if app else PilboxApplication())
-    logger.info("Starting server...")
+    logger.info("Starting server on port "+str(options.port)+"...")
     try:
         server.bind(options.port)
         server.start(1 if options.debug else options.workers)
