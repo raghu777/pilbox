@@ -283,6 +283,37 @@ class Image(object):
         self._skip_background = True
         self.img = img
 
+    def _adpat_with_padding(self,w,h,padding,**kwargs):
+        opts = Image._normalize_options(kwargs)
+        pad=0
+        width=int(w);
+        height=int(h);
+        if padding:
+            pad=float(padding)
+        paddingH=int(width*pad)
+        paddingV=int(height*pad)
+        width=int(width-paddingH)
+        height=int(height-paddingV)
+
+        logger.debug("New Size : "+str([width,height]))
+        self._clip((width,height), opts)
+        if self.img.size == (width,height) and not padding:
+            return  # No need to fill
+        x= ((width+paddingH)-self.img.size[0])/2
+        y= ((height+paddingV)-self.img.size[1])/2
+
+        color = color_hex_to_dec_tuple(opts["background"])
+        mode = "RGBA" if len(color) == 4 else "RGB"
+        logger.debug("New Size with Padding: "+str((width+paddingH, height+paddingV)))
+        img = PIL.Image.new(mode=mode, size=(width+paddingH, height+paddingV), color=(255, 255, 255))
+        # If the image has an alpha channel, use it as a mask when
+        # pasting onto the background.
+        channels = self.img.split()
+        mask = channels[3] if len(channels) == 4 else None
+        img.paste(self.img, (int(x),int(y)), mask=mask)
+        self._skip_background = True
+        self.img = img
+
     def save(self, **kwargs):
         """Returns a buffer to the image for saving, supports the
         following optional keyword arguments:

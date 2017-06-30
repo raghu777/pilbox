@@ -149,7 +149,7 @@ class HealthHandler(tornado.web.RequestHandler):
 
 class ImageHandler(tornado.web.RequestHandler):
     FORWARD_HEADERS = ["Cache-Control", "Expires", "Last-Modified"]
-    OPERATIONS = ["region", "resize", "rotate", "noop", "scale-ar"]
+    OPERATIONS = ["region", "resize", "rotate", "noop", "adapt_pad","scale-ar"]
 
     _FORMAT_TO_MIME = {
         "gif": "image/gif",
@@ -254,12 +254,17 @@ class ImageHandler(tornado.web.RequestHandler):
                 self._image_region(image)
             elif operation == "scale-ar":
                 self._image_scale_ar(image)
+            elif operation == "adapt_pad":
+                self._image_adpat_with_pad(image)
 
         return (self._image_save(image), image.img.format)
 
+    def _image_adpat_with_pad(self,image):
+        opts = self._get_resize_options()
+        image._adpat_with_padding(self.get_argument("w"), self.get_argument("h"),self.get_argument("pad"),**opts)
+
     def _image_scale_ar(self, image):
         opts = self._get_resize_options()
-        print("pad : "+str(self.get_argument("pad")))
         image.scaleToAspectRatio(self.get_argument("ar"),self.get_argument("pad"),**opts)
 
     def _image_region(self, image):
