@@ -178,7 +178,6 @@ class ImageHandler(tornado.web.RequestHandler):
 
         opts = self._get_save_options()
         ops = self._get_operations()
-        print("Ops : "+str(ops))
         if "resize" in ops:
             w, h = self.get_argument("w"), self.get_argument("h")
             Image.validate_dimensions(w, h)
@@ -193,7 +192,6 @@ class ImageHandler(tornado.web.RequestHandler):
         if "region" in ops:
             Image.validate_rectangle(self.get_argument("rect"))
         if "scale-ar" in ops:
-            print("Checking scale-ar options")
             Image.validate_scale_ar_options(self.get_argument("ar"))
 
         Image.validate_options(opts)
@@ -256,13 +254,13 @@ class ImageHandler(tornado.web.RequestHandler):
                 self._image_region(image)
             elif operation == "scale-ar":
                 self._image_scale_ar(image)
-                print("Done")
 
         return (self._image_save(image), image.img.format)
 
     def _image_scale_ar(self, image):
         opts = self._get_resize_options()
-        image.scaleToAspectRatio(self.get_argument("ar"),**opts)
+        print("pad : "+str(self.get_argument("pad")))
+        image.scaleToAspectRatio(self.get_argument("ar"),self.get_argument("pad"),**opts)
 
     def _image_region(self, image):
         image.region(self.get_argument("rect").split(","))
